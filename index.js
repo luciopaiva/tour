@@ -31,14 +31,14 @@ class Tour {
         const stage = this.stages[this.currentStageIndex];
         // ToDo remove slice!
         const selectedRiders = stage.riders.slice(0, 20);
-        Tour.setText(this.stageTitle, stage.index);
-        Tour.setText(this.stageLocation, stage.description);
+        Tour.setText(this.stageTitle, `${stage.index}: ${stage.description}`);
         Tour.setText(this.stageDate, stage.date);
 
         const minTop = 0;
         const maxTop = Math.round(this.chartHeight - this.ORIGINAL_AVATAR_SIZE_IN_PIXELS * this.AVATAR_SCALE_FACTOR);
-        const minLeft = 0;
-        const maxLeft = Math.round(this.chartWidth - this.ORIGINAL_AVATAR_SIZE_IN_PIXELS * this.AVATAR_SCALE_FACTOR);
+        const horizontalSlack = 50;
+        const minLeft = horizontalSlack;
+        const maxLeft = Math.round(this.chartWidth - this.ORIGINAL_AVATAR_SIZE_IN_PIXELS * this.AVATAR_SCALE_FACTOR) - horizontalSlack;
 
         const firstFieldTime = Tour.fieldTimeToSeconds(selectedRiders[0].fieldTime);
         const lastFieldTime = Tour.fieldTimeToSeconds(selectedRiders[selectedRiders.length - 1].fieldTime);
