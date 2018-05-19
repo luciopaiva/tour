@@ -50,7 +50,7 @@ class Tour {
             const left = Math.round(minLeft + screenPositionRatio * (maxLeft - minLeft));
             const position = parseInt(rider.position, 10) || selectedRiders.length;
             const top = Math.round((maxTop - minTop) * ((position - 1) / selectedRiders.length));
-            this.showRiderCard(this.riderByName.get(rider.name), left, top);
+            this.showRiderCard(rider, left, top);
         });
     }
 
@@ -60,27 +60,38 @@ class Tour {
     }
 
     /**
-     * @param {RiderSummary} rider
+     * @param {Rider} rider
      * @param {Number} left
      * @param {Number} top
      */
     showRiderCard(rider, left, top) {
         const card = this.cardTemplate.cloneNode(true);
         card.classList.remove("template");
+        card.style.left = left + "px";
+        card.style.top = top + "px";
 
         const avatar = card.querySelector(".avatar");
 
         avatar.setAttribute("title", rider.name);
-        avatar.style.left = left + "px";
-        avatar.style.top = top + "px";
+
+        const riderSummary = this.riderByName.get(rider.name);
 
         const tileCount = this.greatestRiderIndex;
         const tileSize = this.ORIGINAL_AVATAR_SIZE_IN_PIXELS * this.AVATAR_SCALE_FACTOR;
         const imageWidth = Math.round(tileCount * tileSize);
         const imageHeight = Math.round(tileSize);
         avatar.style.backgroundSize = `${imageWidth}px ${imageHeight}px`;
-        const backgroundLeft = Math.round(tileSize * rider.index);
+        const backgroundLeft = Math.round(tileSize * riderSummary.index);
         avatar.style.backgroundPosition = `-${backgroundLeft}px 0`;
+
+        rider.jerseys.forEach((jersey, index) => {
+            const jerseyIndex = index + 1;
+            const jerseyType = jersey.description.replace(/\s+.*$/, "").toLowerCase();
+
+            const jerseyElement = document.createElement("div");
+            jerseyElement.classList.add("jersey", jerseyType + "-jersey", "jersey-" + jerseyIndex);
+            card.appendChild(jerseyElement);
+        });
 
         this.chart.appendChild(card);
     }

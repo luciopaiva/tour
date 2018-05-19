@@ -3,6 +3,7 @@ Playing with TdF 2017 data.
 
 Le Tour de France logo taken from [Wikipedia](https://en.wikipedia.org/wiki/File:Tour_de_France_logo.svg).
 Background image taken from [Wikipedia](https://commons.wikimedia.org/wiki/File:Col_du_Galibier_3.jpg).
+Jersey icons also taken from Wikipedia.
 
 ---
 

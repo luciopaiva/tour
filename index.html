@@ -23,7 +23,7 @@
             left: 0;
             width: 100%;
             height: 100%;
-            background: url(background.jpg) no-repeat;
+            background: url(assets/background.jpg) no-repeat;
             background-size: cover;
             opacity: .4;
             z-index: -1;
@@ -54,15 +54,49 @@
         .templates {
             display: none;
         }
+        .rider {
+            position: absolute;
+        }
         .avatar {
             position: absolute;
             --width: calc(135px * .6);
             --height: calc(135px * .6);
             width: var(--width);
             height: var(--height);
-            background-image: url(avatars.jpeg);
+            background-image: url(assets/avatars.jpeg);
             border-radius: calc(var(--width) / 2);
             box-shadow: 0 0 5px 0;
+            color: #cecece;
+        }
+        .jersey {
+            position: absolute;
+            top: 60px;
+            width: 26px;
+            height: 26px;
+        }
+        .green-jersey {
+            background: url(assets/jerseys/green.png) no-repeat;
+        }
+        .yellow-jersey {
+            background: url(assets/jerseys/yellow.png) no-repeat;
+        }
+        .white-jersey {
+            background: url(assets/jerseys/white.png) no-repeat;
+        }
+        .polkadot-jersey {
+            background: url(assets/jerseys/polkadot.png) no-repeat;
+        }
+        .jersey-1 {
+            left: 60px;
+        }
+        .jersey-2 {
+            left: 73px;
+        }
+        .jersey-3 {
+            left: 86px;
+        }
+        .jersey-4 {
+            left: 99px;
         }
         .avatar:hover {
             z-index: 100;
@@ -82,7 +116,7 @@
 </head>
 <body>
 
-<img class="logo" src="logo.png" alt="logo">
+<img class="logo" src="assets/logo.png" alt="logo">
 
 <div class="container">
     <h1 class="stage-title">Stage Title</h1>
