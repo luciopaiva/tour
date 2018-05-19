@@ -27,6 +27,7 @@
             background-size: cover;
             opacity: .4;
             z-index: -1;
+            filter: grayscale(90%) blur(3px);
         }
         .logo {
             position: absolute;
@@ -66,6 +67,17 @@
         .avatar:hover {
             z-index: 100;
         }
+        .footer {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            font-size: 80%;
+            color: #2b2b2b;
+        }
+        a, a:active, a:hover, a:visited {
+            color: #001aff;
+            text-decoration: none;
+        }
     </style>
 </head>
 <body>
@@ -79,6 +91,10 @@
     <div class="chart">
 
     </div>
+</div>
+
+<div class="footer">
+    Made by <a href="http://luciopaiva.com" target="_blank">Lucio Paiva</a> - 2018
 </div>
 
 <div class="templates">
