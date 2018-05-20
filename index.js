@@ -20,10 +20,10 @@ class Tour {
         this.currentStageIndex = 0;
         this.processStages();
 
-        this.imageX = [0, 0];
-        this.imageY = [0, 0];
-        this.domainX = [0, 0];
-        this.domainY = [0, 0];
+        this.imageX = [0, 1];
+        this.imageY = [0, 1];
+        this.domainX = [0, 1];
+        this.domainY = [0, 1];
 
         this.chart = Tour.bind(".chart");
         this.stageTitle = Tour.bind(".stage-title");
@@ -93,7 +93,7 @@ class Tour {
 
         reversedRiders.forEach((rider) => {
             const left = this.scaleX(rider.accumulatedTimeInSeconds);
-            const top = Math.round((this.imageY[1] - this.imageY[0]) / 2);
+            const top = this.scaleY(this.riderByName.get(rider.name).chartTopRatio);
             this.showRiderCard(rider, left, top);
         });
     }
@@ -101,6 +101,11 @@ class Tour {
     scaleX(value) {
         const ratio = (this.domainX[1] - value) / (this.domainX[1] - this.domainX[0]);
         return Math.round(this.imageX[0] + ratio * (this.imageX[1] - this.imageX[0]));
+    }
+
+    scaleY(value) {
+        const ratio = (this.domainY[1] - value) / (this.domainY[1] - this.domainY[0]);
+        return Math.round(this.imageY[0] + ratio * (this.imageY[1] - this.imageY[0]));
     }
 
     /**
@@ -234,7 +239,8 @@ class Tour {
                         index: riderIndex,
                         flag: rider.flag,
                         country: rider.country,
-                        accumulatedTimeInSeconds: 0
+                        accumulatedTimeInSeconds: 0,
+                        chartTopRatio: Math.random()
                     });
 
                     if (riderIndex > this.greatestRiderIndex) {

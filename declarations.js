@@ -7,6 +7,7 @@
  * @property {String} flag
  * @property {String} country
  * @property {Number} accumulatedTimeInSeconds
+ * @property {Number} chartTopRatio
  */
 
 /**
