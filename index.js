@@ -93,7 +93,7 @@ class Tour {
 
         reversedRiders.forEach((rider) => {
             const left = this.scaleX(rider.accumulatedTimeInSeconds);
-            const top = this.scaleY(this.riderByName.get(rider.name).chartTopRatio);
+            const top = this.scaleY(this.avatarTopByRiderName.get(rider.name));
             this.showRiderCard(rider, left, top);
         });
     }
@@ -159,31 +159,27 @@ class Tour {
      * @param {Number} top
      */
     showRiderCard(rider, left, top) {
-        const riderSummary = this.riderByName.get(rider.name);
+        const riderIndex = this.riderIndexByName.get(rider.name);
 
-        let cardId = "rider-" + riderSummary.index;
+        let cardId = "rider-" + riderIndex;
         let card = document.getElementById(cardId);
         if (!card) {
             card = this.cardTemplate.cloneNode(true);
             card.setAttribute("id", cardId);
             card.classList.remove("template");
+
+            const avatar = card.querySelector(".avatar");
+
+            avatar.setAttribute("title", rider.name);
+
+            avatar.style.backgroundSize = this.avatarTileSheetSizeCss;
+            const backgroundLeft = Math.round(this.AVATAR_SIZE_IN_PIXELS * riderIndex);
+            avatar.style.backgroundPosition = `-${backgroundLeft}px 0`;
         }
 
         card.classList.remove("hidden");
         card.style.left = left + "px";
         card.style.top = top + "px";
-
-        const avatar = card.querySelector(".avatar");
-
-        avatar.setAttribute("title", rider.name);
-
-        const tileCount = this.greatestRiderIndex;
-        const tileSize = this.AVATAR_SIZE_IN_PIXELS;
-        const imageWidth = Math.round(tileCount * tileSize);
-        const imageHeight = Math.round(tileSize);
-        avatar.style.backgroundSize = `${imageWidth}px ${imageHeight}px`;
-        const backgroundLeft = Math.round(tileSize * riderSummary.index);
-        avatar.style.backgroundPosition = `-${backgroundLeft}px 0`;
 
         // clear all previous jerseys
         card.querySelectorAll(".jersey").forEach(jersey => jersey.remove());
@@ -223,28 +219,26 @@ class Tour {
     }
 
     processStages() {
-        /** @type {Map<String, RiderSummary>} */
-        this.riderByName = new Map();
-        /** @type {Number} */
-        this.greatestRiderIndex = 0;
+        /** @type {Map<String, Number>} */
+        this.avatarTopByRiderName = new Map();
+        /** @type {Map<String, Number>} */
+        this.riderIndexByName = new Map();
+        /** @type {Map<String, Number>} */
+        const accumulatedTimeByRiderName = new Map();
+
+        let greatestRiderIndex = 0;
 
         for (const stage of this.stages) {
             for (const rider of stage.riders) {
-                if (!this.riderByName.has(rider.name)) {
+                if (!this.avatarTopByRiderName.has(rider.name)) {
+                    this.avatarTopByRiderName.set(rider.name, Math.random());
+                }
+                if (!this.riderIndexByName.has(rider.name)) {
                     const riderIndex = parseInt(rider.avatar.match(/_TDF_2017_RIDER_(\d+).jpg/)[1], 10) - 1;
+                    this.riderIndexByName.set(rider.name, riderIndex);
 
-                    this.riderByName.set(rider.name, /** @type {RiderSummary} */ {
-                        name: rider.name,
-                        team: rider.team,
-                        index: riderIndex,
-                        flag: rider.flag,
-                        country: rider.country,
-                        accumulatedTimeInSeconds: 0,
-                        chartTopRatio: Math.random()
-                    });
-
-                    if (riderIndex > this.greatestRiderIndex) {
-                        this.greatestRiderIndex = riderIndex;
+                    if (riderIndex > greatestRiderIndex) {
+                        greatestRiderIndex = riderIndex;
                     }
                 }
 
@@ -253,9 +247,10 @@ class Tour {
                         rider.position === "2" ? 6 : (
                             rider.position === "3" ? 4 : 0)));
                 const timeInThisStage = Tour.fieldTimeToSeconds(rider.fieldTime) - timeBonus;
-                const riderSummary = this.riderByName.get(rider.name);
-                rider.accumulatedTimeInSeconds = riderSummary.accumulatedTimeInSeconds + timeInThisStage;
-                riderSummary.accumulatedTimeInSeconds = rider.accumulatedTimeInSeconds;
+
+                const previousAccumulatedTime = accumulatedTimeByRiderName.get(rider.name) || 0;
+                rider.accumulatedTimeInSeconds = previousAccumulatedTime + timeInThisStage;
+                accumulatedTimeByRiderName.set(rider.name, rider.accumulatedTimeInSeconds);
             }
 
             // now reorder riders by total time so that we don't have to do it every time we update the screen
@@ -266,6 +261,10 @@ class Tour {
             stage.riderByName = new Map();
             stage.riders.forEach(rider => stage.riderByName.set(rider.name, rider));
         }
+
+        const avatarTileSheetWidth = Math.round(greatestRiderIndex * this.AVATAR_SIZE_IN_PIXELS);
+        const avatarTileSheetHeight = Math.round(this.AVATAR_SIZE_IN_PIXELS);
+        this.avatarTileSheetSizeCss = `${avatarTileSheetWidth}px ${avatarTileSheetHeight}px`;
     }
 
     static bind(query) {

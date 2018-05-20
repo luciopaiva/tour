@@ -1,16 +1,5 @@
 
 /**
- * @typedef {Object} RiderSummary
- * @property {String} name
- * @property {String} team
- * @property {Number} index - index of their avatar in the avatar canvas (zero based)
- * @property {String} flag
- * @property {String} country
- * @property {Number} accumulatedTimeInSeconds
- * @property {Number} chartTopRatio
- */
-
-/**
  * @typedef {Object} Jersey
  * @property {String} imgSrc
  * @property {String} description
