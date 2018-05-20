@@ -12,8 +12,8 @@ class Tour {
         this.ORIGINAL_AVATAR_SIZE_IN_PIXELS = parseInt(getComputedStyle(document.body).getPropertyValue("--avatar-size"), 10);
         this.AVATAR_SCALE_FACTOR = parseFloat(getComputedStyle(document.body).getPropertyValue("--avatar-scale"));
         this.SECONDS_PER_STAGE = 2;
-        this.SCROLL_INCREMENT = 1 / 60 / this.SECONDS_PER_STAGE;
-        this.VIEW_IN_MINUTES = 5;
+        this.SCROLL_INCREMENT = 1 / (60 * this.SECONDS_PER_STAGE);
+        this.VIEW_IN_MINUTES = 10;
 
         this.stages = stages;
         this.currentStageIndex = 0;
@@ -30,10 +30,7 @@ class Tour {
         document.addEventListener("keydown", this.onKeyDown.bind(this));
         window.addEventListener("resize", this.updateStage.bind(this));
 
-        // make sure avatars are loaded before starting animation
-        const avatars = new Image();
-        avatars.setAttribute("src", "assets/avatars.jpeg");
-        avatars.addEventListener("load", () => requestAnimationFrame(this.update.bind(this)));
+        requestAnimationFrame(this.update.bind(this));
     }
 
     update() {
@@ -77,20 +74,14 @@ class Tour {
         this.lastTime.style.top = maxTop + "px";
         Tour.setText(this.lastTime, "+" + Tour.humanizeDurationInSeconds(lastFieldTime - firstFieldTime));
 
-        const uniqueRiderNames = new Set();
-        for (const name of leftStage.riderByName.keys()) {
-            uniqueRiderNames.add(name);
-        }
-        for (const name of rightStage.riderByName.keys()) {
-            uniqueRiderNames.add(name);
-        }
-        const reversedRiders = Array.from(uniqueRiderNames)
+        // compile list of riders appearing in both stages (riders in stage i+1 are guaranteed to appear in stage i)
+        const reversedRiders = Array.from(leftStage.riderByName.keys())
             .map(riderName => {
                 const leftState = leftStage.riderByName.get(riderName);
                 const rightState = rightStage.riderByName.get(riderName);
                 const rightTime = rightState ? rightState.accumulatedTimeInSeconds :
                     // rider abandoned the competition - interpolate it to be after the last rider that finished
-                    rightStage.riders[rightStage.riders.length - 1].accumulatedTimeInSeconds + 60;
+                    rightStage.riders[rightStage.riders.length - 1].accumulatedTimeInSeconds + this.VIEW_IN_MINUTES * .1;
                 const result = /** @type {Rider} */ Object.assign({}, leftState);
                 result.accumulatedTimeInSeconds = lerp(leftState.accumulatedTimeInSeconds, rightTime, ratio);
                 return result;
@@ -266,8 +257,16 @@ class Tour {
         });
     }
 
+    static downloadImage(src) {
+        const img = new Image();
+        img.setAttribute("src", src);
+        return new Promise(resolve => img.addEventListener("load", resolve));
+    }
+
     static async start() {
         const stages = JSON.parse(await Tour.getFile("tdf2017.json"));
+        // just make sure avatars are loaded before starting animation
+        await Tour.downloadImage("assets/avatars.jpeg");
         new Tour(stages);
     }
 }
