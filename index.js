@@ -8,6 +8,7 @@ class Tour {
         this.ORIGINAL_AVATAR_SIZE_IN_PIXELS = parseInt(getComputedStyle(document.body).getPropertyValue("--avatar-size"), 10);
         this.AVATAR_SCALE_FACTOR = parseFloat(getComputedStyle(document.body).getPropertyValue("--avatar-scale"));
         this.VISIBLE_RIDERS = parseInt(getComputedStyle(document.body).getPropertyValue("--visible-riders"), 10);
+        this.SCROLL_INCREMENT = 1;  // 0.1;
 
         this.stages = stages;
         this.currentStageIndex = 0;
@@ -20,16 +21,19 @@ class Tour {
         this.stageDate = Tour.bind(".stage-date");
         this.cardTemplate = Tour.bind(".rider.template");
 
+        this.firstTime = Tour.bind("#first-time");
+        this.lastTime = Tour.bind("#last-time");
+
         this.updateStage();
 
         document.addEventListener("keydown", this.onKeyDown.bind(this));
     }
 
     updateStage() {
-        this.chart.innerHTML = "";
+        // start by hiding all cards to show only the ones whose riders figure among the current stage's competitors
+        this.chart.querySelectorAll(".rider").forEach(rider => rider.classList.add("hidden"));
 
         const stage = this.stages[this.currentStageIndex];
-        const selectedRiders = stage.riders.slice(0, this.VISIBLE_RIDERS);
         Tour.setText(this.stageTitle, `${stage.index}: ${stage.description}`);
         Tour.setText(this.stageDate, stage.date);
 
@@ -39,16 +43,42 @@ class Tour {
         const minLeft = horizontalSlack;
         const maxLeft = Math.round(this.chartWidth - this.ORIGINAL_AVATAR_SIZE_IN_PIXELS * this.AVATAR_SCALE_FACTOR) - horizontalSlack;
 
-        const firstFieldTime = selectedRiders[0].accumulatedTimeInSeconds;
-        const lastFieldTime = selectedRiders[selectedRiders.length - 1].accumulatedTimeInSeconds;
+        // ToDo must lerp
+        const firstFieldTime = stage.riders[0].accumulatedTimeInSeconds;
+        const lastFieldTime = firstFieldTime + 60 * 5;  // 5 min window  --- stage.riders[stage.riders.length - 1].accumulatedTimeInSeconds;
 
-        selectedRiders.reverse().forEach((rider) => {
+        this.firstTime.style.left = maxLeft + "px";
+        this.firstTime.style.top = maxTop + "px";
+        this.firstTime.innerText = Tour.humanizeDurationInSeconds(firstFieldTime);
+        this.lastTime.style.left = minLeft + "px";
+        this.lastTime.style.top = maxTop + "px";
+        this.lastTime.innerText = "+" + Tour.humanizeDurationInSeconds(lastFieldTime - firstFieldTime);
+
+        Array.from(stage.riders).reverse().forEach((rider) => {
+            // ToDo must lerp
             const time = rider.accumulatedTimeInSeconds;
             const screenPositionRatio = (lastFieldTime - time) / (lastFieldTime - firstFieldTime);
             const left = Math.round(minLeft + screenPositionRatio * (maxLeft - minLeft));
             const top = Math.round((maxTop - minTop) / 2);
             this.showRiderCard(rider, left, top);
         });
+    }
+
+    static humanizeDurationInSeconds(duration) {
+        let hours = 0;
+        let minutes = 0;
+        if (duration > 3600) {
+            hours = Math.trunc(duration / 3600);
+        }
+        duration -= hours * 3600;
+        if (duration > 60) {
+            minutes = Math.trunc(duration / 60);
+        }
+        duration -= minutes * 60;
+        let seconds = duration;
+        minutes = minutes > 9 ? minutes : "0" + minutes;
+        seconds = seconds > 9 ? seconds : "0" + seconds;
+        return `${hours}:${minutes}:${seconds}`;
     }
 
     static fieldTimeToSeconds(fieldTime) {
@@ -62,16 +92,23 @@ class Tour {
      * @param {Number} top
      */
     showRiderCard(rider, left, top) {
-        const card = this.cardTemplate.cloneNode(true);
-        card.classList.remove("template");
+        const riderSummary = this.riderByName.get(rider.name);
+
+        let cardId = "rider-" + riderSummary.index;
+        let card = document.getElementById(cardId);
+        if (!card) {
+            card = this.cardTemplate.cloneNode(true);
+            card.setAttribute("id", cardId);
+            card.classList.remove("template");
+        }
+
+        card.classList.remove("hidden");
         card.style.left = left + "px";
         card.style.top = top + "px";
 
         const avatar = card.querySelector(".avatar");
 
         avatar.setAttribute("title", rider.name);
-
-        const riderSummary = this.riderByName.get(rider.name);
 
         const tileCount = this.greatestRiderIndex;
         const tileSize = this.ORIGINAL_AVATAR_SIZE_IN_PIXELS * this.AVATAR_SCALE_FACTOR;
@@ -81,10 +118,14 @@ class Tour {
         const backgroundLeft = Math.round(tileSize * riderSummary.index);
         avatar.style.backgroundPosition = `-${backgroundLeft}px 0`;
 
+        // clear all previous jerseys
+        card.querySelectorAll(".jersey").forEach(jersey => jersey.remove());
+
         rider.jerseys.forEach((jersey, index) => {
             const jerseyIndex = index + 1;
             const jerseyType = jersey.description.replace(/\s+.*$/, "").toLowerCase();
 
+            // and then add current ones
             const jerseyElement = document.createElement("div");
             jerseyElement.classList.add("jersey", jerseyType + "-jersey", "jersey-" + jerseyIndex);
             card.appendChild(jerseyElement);
@@ -96,11 +137,11 @@ class Tour {
     onKeyDown(event) {
         switch (event.key) {
             case "ArrowRight":
-                this.currentStageIndex = Math.min(this.currentStageIndex + 1, this.stages.length - 1);
+                this.currentStageIndex = Math.min(this.currentStageIndex + this.SCROLL_INCREMENT, this.stages.length - 1);
                 this.updateStage();
                 break;
             case "ArrowLeft":
-                this.currentStageIndex = Math.max(this.currentStageIndex - 1, 0);
+                this.currentStageIndex = Math.max(this.currentStageIndex - this.SCROLL_INCREMENT, 0);
                 this.updateStage();
                 break;
         }

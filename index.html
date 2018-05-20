@@ -36,6 +36,9 @@
             z-index: -1;
             filter: grayscale(90%) blur(3px);
         }
+        .hidden {
+            display: none;
+        }
         .logo {
             position: absolute;
             top: 20px;
@@ -117,6 +120,9 @@
             color: #001aff;
             text-decoration: none;
         }
+        #first-time, #last-time {
+            position: absolute;
+        }
     </style>
 </head>
 <body>
@@ -130,6 +136,9 @@
     <div class="chart">
 
     </div>
+
+    <span id="first-time"></span>
+    <span id="last-time"></span>
 </div>
 
 <div class="footer">
