@@ -11,8 +11,9 @@ class Tour {
     constructor (stages) {
         this.ORIGINAL_AVATAR_SIZE_IN_PIXELS = parseInt(getComputedStyle(document.body).getPropertyValue("--avatar-size"), 10);
         this.AVATAR_SCALE_FACTOR = parseFloat(getComputedStyle(document.body).getPropertyValue("--avatar-scale"));
-        this.SCROLL_INCREMENT = 1 / 60;
-        this.VIEW_IN_MINUTES = 2;
+        this.SECONDS_PER_STAGE = 2;
+        this.SCROLL_INCREMENT = 1 / 60 / this.SECONDS_PER_STAGE;
+        this.VIEW_IN_MINUTES = 5;
 
         this.stages = stages;
         this.currentStageIndex = 0;
@@ -26,10 +27,19 @@ class Tour {
         this.firstTime = Tour.bind("#first-time");
         this.lastTime = Tour.bind("#last-time");
 
-        this.updateStage();
-
         document.addEventListener("keydown", this.onKeyDown.bind(this));
         window.addEventListener("resize", this.updateStage.bind(this));
+
+        // make sure avatars are loaded before starting animation
+        const avatars = new Image();
+        avatars.setAttribute("src", "assets/avatars.jpeg");
+        avatars.addEventListener("load", () => requestAnimationFrame(this.update.bind(this)));
+    }
+
+    update() {
+        this.currentStageIndex = (this.currentStageIndex + this.SCROLL_INCREMENT) % this.stages.length;
+        this.updateStage();
+        requestAnimationFrame(this.update.bind(this));
     }
 
     updateStage() {
