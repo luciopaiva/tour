@@ -5,6 +5,13 @@
     <title>Le Tour de France 2017</title>
 
     <style>
+        :root {
+            --avatar-size: 135px;
+            --avatar-scale: 0.5;
+            --avatar-width: calc(var(--avatar-size) * var(--avatar-scale));
+            --avatar-height: calc(var(--avatar-size) * var(--avatar-scale));
+            --visible-riders: 10;
+        }
         html, body {
             height: 100%;
             margin: 0;
@@ -59,18 +66,16 @@
         }
         .avatar {
             position: absolute;
-            --width: calc(135px * .6);
-            --height: calc(135px * .6);
-            width: var(--width);
-            height: var(--height);
+            width: var(--avatar-width);
+            height: var(--avatar-height);
             background-image: url(assets/avatars.jpeg);
-            border-radius: calc(var(--width) / 2);
+            border-radius: calc(var(--avatar-width) / 2);
             box-shadow: 0 0 5px 0;
             color: #cecece;
         }
         .jersey {
             position: absolute;
-            top: 60px;
+            top: calc(var(--avatar-height) * 0.8);
             width: 26px;
             height: 26px;
         }
@@ -87,16 +92,16 @@
             background: url(assets/jerseys/polkadot.png) no-repeat;
         }
         .jersey-1 {
-            left: 60px;
+            left: calc(var(--avatar-width) * 0.7);
         }
         .jersey-2 {
-            left: 73px;
+            left: calc(var(--avatar-width) * 0.7 + 13px);
         }
         .jersey-3 {
-            left: 86px;
+            left: calc(var(--avatar-width) * 0.7 + 26px);
         }
         .jersey-4 {
-            left: 99px;
+            left: calc(var(--avatar-width) * 0.7 + 39px);
         }
         .avatar:hover {
             z-index: 100;

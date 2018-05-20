@@ -6,6 +6,7 @@
  * @property {Number} index - index of their avatar in the avatar canvas (zero based)
  * @property {String} flag
  * @property {String} country
+ * @property {Number} accumulatedTimeInSeconds
  */
 
 /**
@@ -24,6 +25,7 @@
  * @property {String} country
  * @property {String} fieldTime
  * @property {String} fieldGap
+ * @property {Number} accumulatedTimeInSeconds
  * @property {Jersey[]} jerseys
  */
 

@@ -5,18 +5,18 @@ class Tour {
      * @param {Stage[]} stages
      */
     constructor (stages) {
-        this.ORIGINAL_AVATAR_SIZE_IN_PIXELS = 135;
-        this.AVATAR_SCALE_FACTOR = 0.6;
+        this.ORIGINAL_AVATAR_SIZE_IN_PIXELS = parseInt(getComputedStyle(document.body).getPropertyValue("--avatar-size"), 10);
+        this.AVATAR_SCALE_FACTOR = parseFloat(getComputedStyle(document.body).getPropertyValue("--avatar-scale"));
+        this.VISIBLE_RIDERS = parseInt(getComputedStyle(document.body).getPropertyValue("--visible-riders"), 10);
 
         this.stages = stages;
         this.currentStageIndex = 0;
-        this.processRiders();
+        this.processStages();
 
         this.chart = Tour.bind(".chart");
         this.chartWidth = this.chart.clientWidth;
         this.chartHeight = this.chart.clientHeight;
         this.stageTitle = Tour.bind(".stage-title");
-        this.stageLocation = Tour.bind(".stage-location");
         this.stageDate = Tour.bind(".stage-date");
         this.cardTemplate = Tour.bind(".rider.template");
 
@@ -29,8 +29,7 @@ class Tour {
         this.chart.innerHTML = "";
 
         const stage = this.stages[this.currentStageIndex];
-        // ToDo remove slice!
-        const selectedRiders = stage.riders.slice(0, 20);
+        const selectedRiders = stage.riders.slice(0, this.VISIBLE_RIDERS);
         Tour.setText(this.stageTitle, `${stage.index}: ${stage.description}`);
         Tour.setText(this.stageDate, stage.date);
 
@@ -40,16 +39,14 @@ class Tour {
         const minLeft = horizontalSlack;
         const maxLeft = Math.round(this.chartWidth - this.ORIGINAL_AVATAR_SIZE_IN_PIXELS * this.AVATAR_SCALE_FACTOR) - horizontalSlack;
 
-        const firstFieldTime = Tour.fieldTimeToSeconds(selectedRiders[0].fieldTime);
-        const lastFieldTime = Tour.fieldTimeToSeconds(selectedRiders[selectedRiders.length - 1].fieldTime);
-        const timeRange = lastFieldTime - firstFieldTime;
+        const firstFieldTime = selectedRiders[0].accumulatedTimeInSeconds;
+        const lastFieldTime = selectedRiders[selectedRiders.length - 1].accumulatedTimeInSeconds;
 
         selectedRiders.reverse().forEach((rider) => {
-            const time = Tour.fieldTimeToSeconds(rider.fieldTime);
+            const time = rider.accumulatedTimeInSeconds;
             const screenPositionRatio = (lastFieldTime - time) / (lastFieldTime - firstFieldTime);
             const left = Math.round(minLeft + screenPositionRatio * (maxLeft - minLeft));
-            const position = parseInt(rider.position, 10) || selectedRiders.length;
-            const top = Math.round((maxTop - minTop) * ((position - 1) / selectedRiders.length));
+            const top = Math.round((maxTop - minTop) / 2);
             this.showRiderCard(rider, left, top);
         });
     }
@@ -109,7 +106,7 @@ class Tour {
         }
     }
 
-    processRiders() {
+    processStages() {
         /** @type {Map<String, RiderSummary>} */
         this.riderByName = new Map();
         /** @type {Number} */
@@ -125,14 +122,27 @@ class Tour {
                         team: rider.team,
                         index: riderIndex,
                         flag: rider.flag,
-                        country: rider.country
+                        country: rider.country,
+                        accumulatedTimeInSeconds: 0
                     });
 
                     if (riderIndex > this.greatestRiderIndex) {
                         this.greatestRiderIndex = riderIndex;
                     }
                 }
+
+                const timeBonus = stage.type === "TT" ? 0 : (  // time trials don't have time bonuses
+                    rider.position === "1" ? 10 : (
+                        rider.position === "2" ? 6 : (
+                            rider.position === "3" ? 4 : 0)));
+                const timeInThisStage = Tour.fieldTimeToSeconds(rider.fieldTime) - timeBonus;
+                const riderSummary = this.riderByName.get(rider.name);
+                rider.accumulatedTimeInSeconds = riderSummary.accumulatedTimeInSeconds + timeInThisStage;
+                riderSummary.accumulatedTimeInSeconds = rider.accumulatedTimeInSeconds;
             }
+
+            // now reorder riders by total time so that we don't have to do it every time we update the screen
+            stage.riders = stage.riders.sort((left, right) => left.accumulatedTimeInSeconds - right.accumulatedTimeInSeconds);
         }
     }
 
