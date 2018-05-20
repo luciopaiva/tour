@@ -36,4 +36,5 @@
  * @property {String} type
  * @property {String} date
  * @property {Rider[]} riders
+ * @property {Map<String, Rider>} riderByName
  */

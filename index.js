@@ -1,4 +1,8 @@
 
+function lerp(left, right, ratio) {
+    return left * (1 - ratio) + right * ratio;
+}
+
 class Tour {
 
     /**
@@ -7,16 +11,14 @@ class Tour {
     constructor (stages) {
         this.ORIGINAL_AVATAR_SIZE_IN_PIXELS = parseInt(getComputedStyle(document.body).getPropertyValue("--avatar-size"), 10);
         this.AVATAR_SCALE_FACTOR = parseFloat(getComputedStyle(document.body).getPropertyValue("--avatar-scale"));
-        this.VISIBLE_RIDERS = parseInt(getComputedStyle(document.body).getPropertyValue("--visible-riders"), 10);
-        this.SCROLL_INCREMENT = 1;  // 0.1;
+        this.SCROLL_INCREMENT = 1 / 60;
+        this.VIEW_IN_MINUTES = 2;
 
         this.stages = stages;
         this.currentStageIndex = 0;
         this.processStages();
 
         this.chart = Tour.bind(".chart");
-        this.chartWidth = this.chart.clientWidth;
-        this.chartHeight = this.chart.clientHeight;
         this.stageTitle = Tour.bind(".stage-title");
         this.stageDate = Tour.bind(".stage-date");
         this.cardTemplate = Tour.bind(".rider.template");
@@ -27,35 +29,65 @@ class Tour {
         this.updateStage();
 
         document.addEventListener("keydown", this.onKeyDown.bind(this));
+        window.addEventListener("resize", this.updateStage.bind(this));
     }
 
     updateStage() {
+        const leftStageIndex = Math.trunc(this.currentStageIndex);
+        const ratio = this.currentStageIndex - leftStageIndex;
+        const rightStageIndex = (leftStageIndex === this.stages.length - 1) ? leftStageIndex : leftStageIndex + 1;
+
         // start by hiding all cards to show only the ones whose riders figure among the current stage's competitors
         this.chart.querySelectorAll(".rider").forEach(rider => rider.classList.add("hidden"));
 
-        const stage = this.stages[this.currentStageIndex];
-        Tour.setText(this.stageTitle, `${stage.index}: ${stage.description}`);
-        Tour.setText(this.stageDate, stage.date);
+        const leftStage = this.stages[leftStageIndex];
+        const rightStage = this.stages[rightStageIndex];
+
+        // ToDo make titles scroll left as stages pass
+        Tour.setText(this.stageTitle, `${leftStage.index}: ${leftStage.description}`);
+        Tour.setText(this.stageDate, leftStage.date);
 
         const minTop = 0;
-        const maxTop = Math.round(this.chartHeight - this.ORIGINAL_AVATAR_SIZE_IN_PIXELS * this.AVATAR_SCALE_FACTOR);
-        const horizontalSlack = 50;
-        const minLeft = horizontalSlack;
-        const maxLeft = Math.round(this.chartWidth - this.ORIGINAL_AVATAR_SIZE_IN_PIXELS * this.AVATAR_SCALE_FACTOR) - horizontalSlack;
+        const maxTop = Math.round(this.chart.clientHeight - this.ORIGINAL_AVATAR_SIZE_IN_PIXELS * this.AVATAR_SCALE_FACTOR);
+        const horizontalMargin = 50;
+        const minLeft = horizontalMargin;
+        const maxLeft = Math.round(this.chart.clientWidth - this.ORIGINAL_AVATAR_SIZE_IN_PIXELS * this.AVATAR_SCALE_FACTOR) - horizontalMargin;
 
-        // ToDo must lerp
-        const firstFieldTime = stage.riders[0].accumulatedTimeInSeconds;
-        const lastFieldTime = firstFieldTime + 60 * 5;  // 5 min window  --- stage.riders[stage.riders.length - 1].accumulatedTimeInSeconds;
+        const leftFirstFieldTime = leftStage.riders[0].accumulatedTimeInSeconds;
+        const rightFirstFieldTime = rightStage.riders[0].accumulatedTimeInSeconds;
+
+        const firstFieldTime = lerp(leftFirstFieldTime, rightFirstFieldTime, ratio);
+        // console.info(`${leftStage.index} first place: ${leftFirstFieldTime}, ${rightStage.index} first place: ${rightFirstFieldTime}, ratio: ${ratio}, interpolated: ${firstFieldTime}`);
+        const lastFieldTime = firstFieldTime + 60 * this.VIEW_IN_MINUTES;
 
         this.firstTime.style.left = maxLeft + "px";
         this.firstTime.style.top = maxTop + "px";
-        this.firstTime.innerText = Tour.humanizeDurationInSeconds(firstFieldTime);
+        Tour.setText(this.firstTime, Tour.humanizeDurationInSeconds(firstFieldTime));
         this.lastTime.style.left = minLeft + "px";
         this.lastTime.style.top = maxTop + "px";
-        this.lastTime.innerText = "+" + Tour.humanizeDurationInSeconds(lastFieldTime - firstFieldTime);
+        Tour.setText(this.lastTime, "+" + Tour.humanizeDurationInSeconds(lastFieldTime - firstFieldTime));
 
-        Array.from(stage.riders).reverse().forEach((rider) => {
-            // ToDo must lerp
+        const uniqueRiderNames = new Set();
+        for (const name of leftStage.riderByName.keys()) {
+            uniqueRiderNames.add(name);
+        }
+        for (const name of rightStage.riderByName.keys()) {
+            uniqueRiderNames.add(name);
+        }
+        const reversedRiders = Array.from(uniqueRiderNames)
+            .map(riderName => {
+                const leftState = leftStage.riderByName.get(riderName);
+                const rightState = rightStage.riderByName.get(riderName);
+                const rightTime = rightState ? rightState.accumulatedTimeInSeconds :
+                    // rider abandoned the competition - interpolate it to be after the last rider that finished
+                    rightStage.riders[rightStage.riders.length - 1].accumulatedTimeInSeconds + 60;
+                const result = /** @type {Rider} */ Object.assign({}, leftState);
+                result.accumulatedTimeInSeconds = lerp(leftState.accumulatedTimeInSeconds, rightTime, ratio);
+                return result;
+            })
+            .sort((leftRider, rightRider) => rightRider.accumulatedTimeInSeconds - leftRider.accumulatedTimeInSeconds);
+
+        reversedRiders.forEach((rider) => {
             const time = rider.accumulatedTimeInSeconds;
             const screenPositionRatio = (lastFieldTime - time) / (lastFieldTime - firstFieldTime);
             const left = Math.round(minLeft + screenPositionRatio * (maxLeft - minLeft));
@@ -76,9 +108,9 @@ class Tour {
         }
         duration -= minutes * 60;
         let seconds = duration;
-        minutes = minutes > 9 ? minutes : "0" + minutes;
-        seconds = seconds > 9 ? seconds : "0" + seconds;
-        return `${hours}:${minutes}:${seconds}`;
+        minutes = minutes > 9 ? minutes.toFixed(0) : "0" + minutes.toFixed(0);
+        seconds = seconds > 9 ? seconds.toFixed(0) : "0" + seconds.toFixed(0);
+        return `${hours.toFixed(0)}:${minutes}:${seconds}`;
     }
 
     static fieldTimeToSeconds(fieldTime) {
@@ -136,6 +168,14 @@ class Tour {
 
     onKeyDown(event) {
         switch (event.key) {
+            case "Home":
+                this.currentStageIndex = 0;
+                this.updateStage();
+                break;
+            case "End":
+                this.currentStageIndex = this.stages.length - 1;
+                this.updateStage();
+                break;
             case "ArrowRight":
                 this.currentStageIndex = Math.min(this.currentStageIndex + this.SCROLL_INCREMENT, this.stages.length - 1);
                 this.updateStage();
@@ -183,7 +223,12 @@ class Tour {
             }
 
             // now reorder riders by total time so that we don't have to do it every time we update the screen
-            stage.riders = stage.riders.sort((left, right) => left.accumulatedTimeInSeconds - right.accumulatedTimeInSeconds);
+            stage.riders = stage.riders
+                .sort((left, right) => left.accumulatedTimeInSeconds - right.accumulatedTimeInSeconds);
+
+            // compile map of riders by name
+            stage.riderByName = new Map();
+            stage.riders.forEach(rider => stage.riderByName.set(rider.name, rider));
         }
     }
 
