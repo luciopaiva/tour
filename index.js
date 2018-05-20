@@ -40,19 +40,16 @@ class Tour {
     }
 
     updateStage() {
+        // pick the two stages that are going to be interpolated
+
         const leftStageIndex = Math.trunc(this.currentStageIndex);
         const ratio = this.currentStageIndex - leftStageIndex;
         const rightStageIndex = (leftStageIndex === this.stages.length - 1) ? leftStageIndex : leftStageIndex + 1;
 
-        // start by hiding all cards to show only the ones whose riders figure among the current stage's competitors
-        this.chart.querySelectorAll(".rider").forEach(rider => rider.classList.add("hidden"));
-
         const leftStage = this.stages[leftStageIndex];
         const rightStage = this.stages[rightStageIndex];
 
-        // ToDo make titles scroll left as stages pass
-        Tour.setText(this.stageTitle, `${leftStage.index}: ${leftStage.description}`);
-        Tour.setText(this.stageDate, leftStage.date);
+        // define screen bounds
 
         const minTop = 0;
         const maxTop = Math.round(this.chart.clientHeight - this.ORIGINAL_AVATAR_SIZE_IN_PIXELS * this.AVATAR_SCALE_FACTOR);
@@ -67,12 +64,19 @@ class Tour {
         // console.info(`${leftStage.index} first place: ${leftFirstFieldTime}, ${rightStage.index} first place: ${rightFirstFieldTime}, ratio: ${ratio}, interpolated: ${firstFieldTime}`);
         const lastFieldTime = firstFieldTime + 60 * this.VIEW_IN_MINUTES;
 
-        this.firstTime.style.left = maxLeft + "px";
-        this.firstTime.style.top = maxTop + "px";
+        // update screen labels
+
+        // ToDo make titles scroll left as stages pass
+        Tour.setText(this.stageTitle, `${leftStage.index}: ${leftStage.description}`);
+        Tour.setText(this.stageDate, leftStage.date);
+
         Tour.setText(this.firstTime, Tour.humanizeDurationInSeconds(firstFieldTime));
-        this.lastTime.style.left = minLeft + "px";
-        this.lastTime.style.top = maxTop + "px";
         Tour.setText(this.lastTime, "+" + Tour.humanizeDurationInSeconds(lastFieldTime - firstFieldTime));
+
+        // update players' cards
+
+        // start by hiding all cards to show only the ones whose riders figure among the current stage's competitors
+        this.chart.querySelectorAll(".rider").forEach(rider => rider.classList.add("hidden"));
 
         // compile list of riders appearing in both stages (riders in stage i+1 are guaranteed to appear in stage i)
         const reversedRiders = Array.from(leftStage.riderByName.keys())

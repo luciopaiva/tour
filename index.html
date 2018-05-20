@@ -56,9 +56,20 @@
         }
         .chart {
             width: 100%;
-            height: 600px;
-
-            position: relative;
+            position: absolute;
+            top: 200px;
+            bottom: 50px;
+            /*border: 1px solid black;*/
+        }
+        #first-time, #last-time {
+            position: absolute;
+            bottom: 100px;
+        }
+        #first-time {
+            right: var(--avatar-width);
+        }
+        #last-time {
+            left: var(--avatar-width);
         }
         .templates {
             display: none;
@@ -118,9 +129,6 @@
         a, a:active, a:hover, a:visited {
             color: #001aff;
             text-decoration: none;
-        }
-        #first-time, #last-time {
-            position: absolute;
         }
     </style>
 </head>
