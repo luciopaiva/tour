@@ -11,6 +11,7 @@ class Tour {
     constructor (stages) {
         this.ORIGINAL_AVATAR_SIZE_IN_PIXELS = parseInt(getComputedStyle(document.body).getPropertyValue("--avatar-size"), 10);
         this.AVATAR_SCALE_FACTOR = parseFloat(getComputedStyle(document.body).getPropertyValue("--avatar-scale"));
+        this.AVATAR_SIZE_IN_PIXELS = this.ORIGINAL_AVATAR_SIZE_IN_PIXELS * this.AVATAR_SCALE_FACTOR;
         this.SECONDS_PER_STAGE = 2;
         this.SCROLL_INCREMENT = 1 / (60 * this.SECONDS_PER_STAGE);
         this.VIEW_IN_MINUTES = 10;
@@ -18,6 +19,11 @@ class Tour {
         this.stages = stages;
         this.currentStageIndex = 0;
         this.processStages();
+
+        this.imageX = [0, 0];
+        this.imageY = [0, 0];
+        this.domainX = [0, 0];
+        this.domainY = [0, 0];
 
         this.chart = Tour.bind(".chart");
         this.stageTitle = Tour.bind(".stage-title");
@@ -50,19 +56,7 @@ class Tour {
         const rightStage = this.stages[rightStageIndex];
 
         // define screen bounds
-
-        const minTop = 0;
-        const maxTop = Math.round(this.chart.clientHeight - this.ORIGINAL_AVATAR_SIZE_IN_PIXELS * this.AVATAR_SCALE_FACTOR);
-        const horizontalMargin = 50;
-        const minLeft = horizontalMargin;
-        const maxLeft = Math.round(this.chart.clientWidth - this.ORIGINAL_AVATAR_SIZE_IN_PIXELS * this.AVATAR_SCALE_FACTOR) - horizontalMargin;
-
-        const leftFirstFieldTime = leftStage.riders[0].accumulatedTimeInSeconds;
-        const rightFirstFieldTime = rightStage.riders[0].accumulatedTimeInSeconds;
-
-        const firstFieldTime = lerp(leftFirstFieldTime, rightFirstFieldTime, ratio);
-        // console.info(`${leftStage.index} first place: ${leftFirstFieldTime}, ${rightStage.index} first place: ${rightFirstFieldTime}, ratio: ${ratio}, interpolated: ${firstFieldTime}`);
-        const lastFieldTime = firstFieldTime + 60 * this.VIEW_IN_MINUTES;
+        this.adjustScale(leftStage, rightStage, ratio);
 
         // update screen labels
 
@@ -70,15 +64,16 @@ class Tour {
         Tour.setText(this.stageTitle, `${leftStage.index}: ${leftStage.description}`);
         Tour.setText(this.stageDate, leftStage.date);
 
-        Tour.setText(this.firstTime, Tour.humanizeDurationInSeconds(firstFieldTime));
-        Tour.setText(this.lastTime, "+" + Tour.humanizeDurationInSeconds(lastFieldTime - firstFieldTime));
+        Tour.setText(this.firstTime, Tour.humanizeDurationInSeconds(this.domainX[0]));
+        Tour.setText(this.lastTime, "+" + Tour.humanizeDurationInSeconds(this.domainX[1] - this.domainX[0]));
 
         // update players' cards
 
         // start by hiding all cards to show only the ones whose riders figure among the current stage's competitors
         this.chart.querySelectorAll(".rider").forEach(rider => rider.classList.add("hidden"));
 
-        // compile list of riders appearing in both stages (riders in stage i+1 are guaranteed to appear in stage i)
+        // compile list of riders appearing in both stages
+        // left stage's set of riders is guaranteed to contain right stage's riders, so let's just use the left set
         const reversedRiders = Array.from(leftStage.riderByName.keys())
             .map(riderName => {
                 const leftState = leftStage.riderByName.get(riderName);
@@ -86,19 +81,49 @@ class Tour {
                 const rightTime = rightState ? rightState.accumulatedTimeInSeconds :
                     // rider abandoned the competition - interpolate it to be after the last rider that finished
                     rightStage.riders[rightStage.riders.length - 1].accumulatedTimeInSeconds + this.VIEW_IN_MINUTES * .1;
+
+                // clone from left state
                 const result = /** @type {Rider} */ Object.assign({}, leftState);
+                // interpolate time
                 result.accumulatedTimeInSeconds = lerp(leftState.accumulatedTimeInSeconds, rightTime, ratio);
                 return result;
             })
+            // order from last to first so appends favor those at the top of the rank
             .sort((leftRider, rightRider) => rightRider.accumulatedTimeInSeconds - leftRider.accumulatedTimeInSeconds);
 
         reversedRiders.forEach((rider) => {
-            const time = rider.accumulatedTimeInSeconds;
-            const screenPositionRatio = (lastFieldTime - time) / (lastFieldTime - firstFieldTime);
-            const left = Math.round(minLeft + screenPositionRatio * (maxLeft - minLeft));
-            const top = Math.round((maxTop - minTop) / 2);
+            const left = this.scaleX(rider.accumulatedTimeInSeconds);
+            const top = Math.round((this.imageY[1] - this.imageY[0]) / 2);
             this.showRiderCard(rider, left, top);
         });
+    }
+
+    scaleX(value) {
+        const ratio = (this.domainX[1] - value) / (this.domainX[1] - this.domainX[0]);
+        return Math.round(this.imageX[0] + ratio * (this.imageX[1] - this.imageX[0]));
+    }
+
+    /**
+     * @param {Stage} leftStage
+     * @param {Stage} rightStage
+     * @param {Number} ratio
+     */
+    adjustScale(leftStage, rightStage, ratio) {
+        this.imageY[0] = 0;
+        this.imageY[1] = Math.round(this.chart.clientHeight - this.AVATAR_SIZE_IN_PIXELS);
+
+        const horizontalMargin = 50;
+        this.imageX[0] = horizontalMargin;
+        this.imageX[1] = Math.round(this.chart.clientWidth - this.AVATAR_SIZE_IN_PIXELS) - horizontalMargin;
+
+        const leftFirstFieldTime = leftStage.riders[0].accumulatedTimeInSeconds;
+        const rightFirstFieldTime = rightStage.riders[0].accumulatedTimeInSeconds;
+
+        const firstFieldTime = lerp(leftFirstFieldTime, rightFirstFieldTime, ratio);
+        const lastFieldTime = firstFieldTime + 60 * this.VIEW_IN_MINUTES;
+
+        this.domainX[0] = firstFieldTime;
+        this.domainX[1] = lastFieldTime;
     }
 
     static humanizeDurationInSeconds(duration) {
@@ -148,7 +173,7 @@ class Tour {
         avatar.setAttribute("title", rider.name);
 
         const tileCount = this.greatestRiderIndex;
-        const tileSize = this.ORIGINAL_AVATAR_SIZE_IN_PIXELS * this.AVATAR_SCALE_FACTOR;
+        const tileSize = this.AVATAR_SIZE_IN_PIXELS;
         const imageWidth = Math.round(tileCount * tileSize);
         const imageHeight = Math.round(tileSize);
         avatar.style.backgroundSize = `${imageWidth}px ${imageHeight}px`;
