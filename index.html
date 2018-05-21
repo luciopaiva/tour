@@ -44,15 +44,32 @@
             left: 20px;
             width: 200px;
         }
-        .stage-title {
-            margin: 20px 0 0 0;
+        .stage-header-mask {
+            position: absolute;
+            top: 10px;
+            height: 200px;
+            left: 250px;
+            right: 10px;
+            overflow: hidden;
         }
-        .container {
-            margin: 0 auto;
-
+        .stage-header-container {
+            position: relative;
+            /*width: 100%;*/
+            height: 100%;
+        }
+        .stage-header {
             display: flex;
             flex-direction: column;
             align-items: center;
+
+            position: absolute;
+        }
+        .stage-title {
+            margin: 20px 0 0 0;
+            white-space: nowrap;
+        }
+        .stage-date {
+            white-space: nowrap;
         }
         .chart {
             width: 100%;
@@ -135,17 +152,14 @@
 
 <img class="logo" src="assets/logo.png" alt="logo">
 
-<div class="container">
-    <h1 class="stage-title"></h1>
-    <h3 class="stage-date"></h3>
-
-    <div class="chart">
-
-    </div>
-
-    <span id="first-time"></span>
-    <span id="last-time"></span>
+<div class="stage-header-mask">
+    <div class="stage-header-container"></div>
 </div>
+
+<div class="chart"></div>
+
+<span id="first-time"></span>
+<span id="last-time"></span>
 
 <div class="footer">
     Made by <a href="http://luciopaiva.com" target="_blank">Lucio Paiva</a> - 2018
@@ -154,6 +168,11 @@
 <div class="templates">
     <div class="rider template">
         <div class="avatar"></div>
+    </div>
+
+    <div class="stage-header template">
+        <h1 class="stage-title"></h1>
+        <h3 class="stage-date"></h3>
     </div>
 </div>
 

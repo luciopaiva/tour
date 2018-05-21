@@ -12,9 +12,15 @@ class Tour {
         this.ORIGINAL_AVATAR_SIZE_IN_PIXELS = parseInt(getComputedStyle(document.body).getPropertyValue("--avatar-size"), 10);
         this.AVATAR_SCALE_FACTOR = parseFloat(getComputedStyle(document.body).getPropertyValue("--avatar-scale"));
         this.AVATAR_SIZE_IN_PIXELS = this.ORIGINAL_AVATAR_SIZE_IN_PIXELS * this.AVATAR_SCALE_FACTOR;
-        this.SECONDS_PER_STAGE = 2;
+        this.SECONDS_PER_STAGE = 4;
         this.SCROLL_INCREMENT = 1 / (60 * this.SECONDS_PER_STAGE);
         this.VIEW_IN_MINUTES = 10;
+
+        this.chart = Tour.bind(".chart");
+        this.stageHeaderContainer = Tour.bind(".stage-header-container");
+        this.stageHeaderMask = Tour.bind(".stage-header-mask");
+        this.stageHeaderTemplate = Tour.bind(".stage-header.template");
+        this.cardTemplate = Tour.bind(".rider.template");
 
         this.stages = stages;
         this.currentStageIndex = 0;
@@ -25,18 +31,18 @@ class Tour {
         this.domainX = [0, 1];
         this.domainY = [0, 1];
 
-        this.chart = Tour.bind(".chart");
-        this.stageTitle = Tour.bind(".stage-title");
-        this.stageDate = Tour.bind(".stage-date");
-        this.cardTemplate = Tour.bind(".rider.template");
-
         this.firstTime = Tour.bind("#first-time");
         this.lastTime = Tour.bind("#last-time");
 
         document.addEventListener("keydown", this.onKeyDown.bind(this));
-        window.addEventListener("resize", this.updateStage.bind(this));
+        window.addEventListener("resize", this.onWindowResize.bind(this));
 
         requestAnimationFrame(this.update.bind(this));
+    }
+
+    onWindowResize() {
+        this.recomputeHeaderPositions();
+        this.update();
     }
 
     update() {
@@ -59,11 +65,8 @@ class Tour {
         this.adjustScale(leftStage, rightStage, ratio);
 
         // update screen labels
-
-        // ToDo make titles scroll left as stages pass
-        Tour.setText(this.stageTitle, `${leftStage.index}: ${leftStage.description}`);
-        Tour.setText(this.stageDate, leftStage.date);
-
+        this.stageHeaderContainer.style.left =
+            Math.round(-this.stageHeaderMask.clientWidth * this.currentStageIndex).toFixed(0) + "px";
         Tour.setText(this.firstTime, Tour.humanizeDurationInSeconds(this.domainX[0]));
         Tour.setText(this.lastTime, "+" + Tour.humanizeDurationInSeconds(this.domainX[1] - this.domainX[0]));
 
@@ -228,7 +231,15 @@ class Tour {
 
         let greatestRiderIndex = 0;
 
+        let stageIndex = 0;
         for (const stage of this.stages) {
+            // create and position stage header
+            const header = this.stageHeaderTemplate.cloneNode(true);
+            header.classList.remove("template");
+            Tour.setText(header.querySelector(".stage-title"), `${stage.index}: ${stage.description}`);
+            Tour.setText(header.querySelector(".stage-date"), stage.date);
+            this.recomputeHeaderPosition(header, stageIndex++);
+
             for (const rider of stage.riders) {
                 if (!this.avatarTopByRiderName.has(rider.name)) {
                     this.avatarTopByRiderName.set(rider.name, Math.random());
@@ -265,6 +276,22 @@ class Tour {
         const avatarTileSheetWidth = Math.round(greatestRiderIndex * this.AVATAR_SIZE_IN_PIXELS);
         const avatarTileSheetHeight = Math.round(this.AVATAR_SIZE_IN_PIXELS);
         this.avatarTileSheetSizeCss = `${avatarTileSheetWidth}px ${avatarTileSheetHeight}px`;
+    }
+
+    recomputeHeaderPositions() {
+        const headers = this.stageHeaderContainer.querySelectorAll(".stage-header");
+        for (let i = 0; i < this.stages.length; i++) {
+            this.recomputeHeaderPosition(headers[i], i);
+        }
+    }
+
+    recomputeHeaderPosition(header, stageIndex) {
+        const containerWidth = this.stageHeaderMask.clientWidth;
+        const containerHeight = this.stageHeaderMask.clientHeight;
+        this.stageHeaderContainer.appendChild(header);
+        const shift = stageIndex * containerWidth;
+        header.style.left = Math.round(shift + (containerWidth - header.clientWidth) / 2).toFixed(0) + "px";
+        header.style.top = Math.round((containerHeight - header.clientHeight) / 2).toFixed(0) + "px";
     }
 
     static bind(query) {
